@@ -40,7 +40,6 @@ export default function Dashboard() {
   const messagesEndRef = useRef(null);
   const router = useRouter();
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/auth');
@@ -51,7 +50,6 @@ export default function Dashboard() {
     }
   }, [user, loading, errorAuth, router]);
 
-  // Fetch user data
   useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
@@ -69,7 +67,6 @@ export default function Dashboard() {
               lastLogin: serverTimestamp()
             });
           } else {
-            // Initialize user data if document doesn't exist
             setUserData({
               name: user.displayName || user.email?.split('@')[0] || 'User',
               email: user.email,
@@ -86,7 +83,6 @@ export default function Dashboard() {
     fetchUserData();
   }, [user]);
 
-  // Fetch conversations with error handling
   useEffect(() => {
     if (!user) return;
 
@@ -138,7 +134,6 @@ export default function Dashboard() {
     };
   }, [user]);
 
-  // Fetch messages for active chat with error handling
   useEffect(() => {
     if (!activeChat || !user) return;
 
@@ -159,8 +154,6 @@ export default function Dashboard() {
             });
           });
           setMessages(msgs);
-          
-          // Mark messages as read
           markMessagesAsRead(msgs, activeChat.id);
         },
         (error) => {
@@ -178,7 +171,6 @@ export default function Dashboard() {
     };
   }, [activeChat, user]);
 
-  // Auto-scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -205,7 +197,6 @@ export default function Dashboard() {
         
         await Promise.all(batch);
         
-        // Update local unread counts
         setUnreadCounts(prev => ({
           ...prev,
           [conversationId]: 0
@@ -247,7 +238,6 @@ export default function Dashboard() {
     
     setError('');
     try {
-      // Check if conversation already exists
       const existingConvo = conversations.find(convo => 
         convo.otherUserId === otherUser.id
       );
@@ -260,7 +250,6 @@ export default function Dashboard() {
         return;
       }
       
-      // Create new conversation
       const docRef = await addDoc(collection(db, "conversations"), {
         participants: [user.uid, otherUser.id],
         lastMessage: "",
@@ -286,7 +275,6 @@ export default function Dashboard() {
     if (!formData.message.trim() || !activeChat || !user) return;
 
     try {
-      // Add message to subcollection
       await addDoc(
         collection(db, "conversations", activeChat.id, "messages"), 
         {
@@ -297,11 +285,9 @@ export default function Dashboard() {
         }
       );
       
-      // Get current unread count for the recipient
       const conversationDoc = await getDoc(doc(db, "conversations", activeChat.id));
       const currentUnread = conversationDoc.data()?.[`unread_${activeChat.otherUser.id}`] || 0;
       
-      // Update conversation last message and increment unread count
       await updateDoc(
         doc(db, "conversations", activeChat.id), 
         {
@@ -405,48 +391,63 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
       </div>
     );
   }
 
   if (!user) {
-    return null; // or redirect to auth page
+    return null;
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-4 md:p-8">
-      {/* Profile Update Modal */}
+    <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-white p-4 md:p-8">
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-xl">
-            <h2 className="text-xl font-semibold mb-4 text-black">Edit Profile</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-indigo-900">Edit Profile</h2>
+              <button 
+                onClick={() => setShowProfileModal(false)}
+                className="text-indigo-500 hover:text-indigo-700 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={handleProfileUpdate}>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Name</label>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-indigo-700 mb-2">Display Name</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-4 py-3 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   required
                 />
               </div>
-              {error && <p className="text-red-500 mb-4">{error}</p>}
-              {success && <p className="text-green-500 mb-4">{success}</p>}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-lg text-sm">
+                  {success}
+                </div>
+              )}
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setShowProfileModal(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-5 py-2.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-md hover:shadow-indigo-200"
                 >
                   Save Changes
                 </button>
@@ -456,47 +457,68 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Password Change Modal */}
       {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-xl">
-            <h2 className="text-xl font-semibold mb-4 text-black">Change Password</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-2xl animate-fade-in">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-indigo-900">Change Password</h2>
+              <button 
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setError('');
+                  setFormData(prev => ({...prev, currentPassword: '', newPassword: '', confirmPassword: ''}));
+                }}
+                className="text-indigo-500 hover:text-indigo-700 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
             <form onSubmit={handlePasswordChange}>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Current Password</label>
-                <input
-                  type="password"
-                  name="currentPassword"
-                  value={formData.currentPassword}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  required
-                />
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-indigo-700 mb-2">Current Password</label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={formData.currentPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-indigo-700 mb-2">New Password</label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={formData.newPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-indigo-700 mb-2">Confirm New Password</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
               </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">New Password</label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={formData.newPassword}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Confirm New Password</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  required
-                />
-              </div>
-              {error && <p className="text-red-500 mb-4">{error}</p>}
-              {success && <p className="text-green-500 mb-4">{success}</p>}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="mb-4 p-3 bg-green-50 text-green-600 rounded-lg text-sm">
+                  {success}
+                </div>
+              )}
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
@@ -505,13 +527,13 @@ export default function Dashboard() {
                     setError('');
                     setFormData(prev => ({...prev, currentPassword: '', newPassword: '', confirmPassword: ''}));
                   }}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="px-5 py-2.5 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-md hover:shadow-indigo-200"
                 >
                   Change Password
                 </button>
@@ -521,50 +543,70 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto">
-        {/* Error/Success Messages */}
+      <div className="max-w-7xl mx-auto">
         {error && (
-          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
-            {error}
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{error}</p>
+              </div>
+            </div>
           </div>
         )}
         {success && (
-          <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
-            {success}
+          <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">{success}</p>
+              </div>
+            </div>
           </div>
         )}
 
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-black">
+          <h1 className="text-3xl font-bold text-indigo-900">
             {activeChat ? (
               <div className="flex items-center">
                 <button 
                   onClick={() => setActiveChat(null)}
-                  className="mr-4 p-1 rounded-full hover:bg-gray-100"
+                  className="mr-4 p-2 rounded-full hover:bg-indigo-100 transition-colors"
                 >
-                  <FiChevronLeft className="text-2xl" />
+                  <FiChevronLeft className="text-2xl text-indigo-600" />
                 </button>
-                <span>{activeChat.otherUser?.name || 'Unknown User'}</span>
+                <span className="text-indigo-800">{activeChat.otherUser?.name || 'Unknown User'}</span>
               </div>
             ) : (
-              'Dashboard'
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+                Welcome back, {userData?.name || 'User'}
+              </span>
             )}
           </h1>
           <button
             onClick={handleSignOut}
-            className="flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+            className="flex items-center px-4 py-2.5 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors border border-red-100 shadow-sm"
           >
             <FiLogOut className="mr-2" /> Sign Out
           </button>
         </div>
 
         {activeChat ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            {/* Messages area */}
-            <div className="h-[60vh] overflow-y-auto p-4">
+          <div className="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden flex flex-col h-[calc(100vh-180px)]">
+            <div className="flex-1 overflow-y-auto p-6 bg-indigo-50">
               {messages.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-gray-500">
-                  No messages yet. Start the conversation!
+                <div className="h-full flex flex-col items-center justify-center text-indigo-400">
+                  <FiMessageSquare className="text-4xl mb-4" />
+                  <p className="text-lg">No messages yet</p>
+                  <p className="text-sm mt-1">Send your first message to start the conversation</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -574,15 +616,19 @@ export default function Dashboard() {
                       className={`flex ${message.sender === user?.uid ? 'justify-end' : 'justify-start'}`}
                     >
                       <div 
-                        className={`max-w-xs md:max-w-md px-4 py-2 rounded-lg ${message.sender === user?.uid 
+                        className={`max-w-xs md:max-w-md px-4 py-3 rounded-2xl ${message.sender === user?.uid 
                           ? 'bg-indigo-600 text-white rounded-br-none' 
-                          : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}
+                          : 'bg-white text-indigo-900 rounded-bl-none border border-indigo-200'}`}
                       >
-                        <p>{message.text}</p>
-                        <p className={`text-xs mt-1 ${message.sender === user?.uid ? 'text-indigo-200' : 'text-gray-500'}`}>
-                          {message.timestamp?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                          {message.read && message.sender === user?.uid && ' ✓'}
-                        </p>
+                        <p className="text-sm md:text-base">{message.text}</p>
+                        <div className={`flex items-center justify-end mt-1 space-x-1 ${message.sender === user?.uid ? 'text-indigo-200' : 'text-indigo-500'}`}>
+                          <span className="text-xs">
+                            {message.timestamp?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </span>
+                          {message.read && message.sender === user?.uid && (
+                            <span className="text-xs">✓</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -591,8 +637,7 @@ export default function Dashboard() {
               )}
             </div>
             
-            {/* Message input */}
-            <form onSubmit={sendMessage} className="border-t border-gray-200 p-4">
+            <form onSubmit={sendMessage} className="border-t border-indigo-200 p-4 bg-white">
               <div className="flex items-center">
                 <input
                   type="text"
@@ -600,103 +645,130 @@ export default function Dashboard() {
                   value={formData.message}
                   onChange={handleInputChange}
                   placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="flex-1 px-4 py-3 border border-indigo-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  autoComplete="off"
                 />
                 <button
                   type="submit"
                   disabled={!formData.message.trim()}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-r-lg hover:bg-indigo-700 transition-colors disabled:bg-indigo-300"
+                  className={`px-5 py-3 rounded-r-lg transition-colors ${formData.message.trim() 
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
+                    : 'bg-indigo-200 text-indigo-400 cursor-not-allowed'}`}
                 >
-                  <FiSend />
+                  <FiSend className="text-lg" />
                 </button>
               </div>
             </form>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Profile Card */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
               <div className="flex flex-col items-center mb-6">
                 <div className="relative mb-4">
-                  <div className="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-2xl font-bold border-4 border-indigo-200">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 text-3xl font-bold border-4 border-white shadow-md">
                     {userData?.name ? userData.name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || 'U'}
                   </div>
                 </div>
-                <h2 className="text-xl font-semibold text-black text-center">
+                <h2 className="text-xl font-bold text-indigo-900 text-center">
                   {userData?.name || user?.email?.split('@')[0] || 'User'}
                 </h2>
-                <p className="text-gray-600 text-center">{user?.email || 'No email'}</p>
+                <p className="text-indigo-700 text-center text-sm mt-1">{user?.email || 'No email'}</p>
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center text-gray-600">
-                  <FiCalendar className="mr-3 text-indigo-600" />
-                  <span>Member since: {userData?.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}</span>
+                <div className="flex items-center text-indigo-800 p-3 bg-indigo-50 rounded-lg">
+                  <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+                    <FiCalendar className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-indigo-600">Member since</p>
+                    <p className="text-sm font-medium">
+                      {userData?.createdAt?.toDate?.()?.toLocaleDateString() || 'Unknown'}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center text-gray-600">
-                  <FiCalendar className="mr-3 text-indigo-600" />
-                  <span>Last login: {userData?.lastLogin?.toDate?.()?.toLocaleString() || 'Just now'}</span>
+                <div className="flex items-center text-indigo-800 p-3 bg-indigo-50 rounded-lg">
+                  <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+                    <FiCalendar className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-indigo-600">Last login</p>
+                    <p className="text-sm font-medium">
+                      {userData?.lastLogin?.toDate?.()?.toLocaleString() || 'Just now'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Search Users Card */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2">
-              <h2 className="text-xl font-semibold mb-6 text-black">Find Users</h2>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 lg:col-span-2">
+              <h2 className="text-xl font-bold text-indigo-900 mb-6">Find Users</h2>
               <form onSubmit={handleSearch} className="mb-6">
                 <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiSearch className="text-indigo-400" />
+                  </div>
                   <input
                     type="text"
                     placeholder="Search by name..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-2 pl-10 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full pl-10 pr-4 py-3 border border-indigo-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   />
-                  <FiSearch className="absolute left-3 top-3 text-gray-400" />
                 </div>
                 <button
                   type="submit"
-                  className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="mt-3 px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium shadow-md hover:shadow-indigo-200 w-full md:w-auto"
                 >
-                  Search
+                  Search Users
                 </button>
               </form>
 
               {searchResults.length > 0 ? (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-gray-800">Search Results</h3>
-                  <div className="divide-y divide-gray-200">
+                  <h3 className="text-lg font-semibold text-indigo-800">Search Results</h3>
+                  <div className="divide-y divide-indigo-100">
                     {searchResults.map((user) => (
-                      <div key={user.id} className="py-3 flex items-center justify-between">
+                      <div key={user.id} className="py-4 flex items-center justify-between">
                         <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-3">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-xl mr-4 shadow-sm">
                             {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900">{user.name || 'Unknown User'}</p>
-                            <p className="text-sm text-gray-500">{user.email || 'No email available'}</p>
+                            <p className="font-medium text-indigo-900">{user.name || 'Unknown User'}</p>
+                            <p className="text-sm text-indigo-700">{user.email || 'No email available'}</p>
                           </div>
                         </div>
                         <button 
                           onClick={() => startNewChat(user)}
-                          className="px-3 py-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm flex items-center"
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm flex items-center shadow-sm hover:shadow-md"
                         >
-                          <FiMessageSquare className="mr-1" /> Message
+                          <FiMessageSquare className="mr-2" /> Message
                         </button>
                       </div>
                     ))}
                   </div>
                 </div>
               ) : searchQuery ? (
-                <p className="text-gray-500">No users found matching your search.</p>
+                <div className="text-center py-8">
+                  <FiSearch className="mx-auto text-4xl text-indigo-300 mb-4" />
+                  <p className="text-indigo-600">No users found matching your search.</p>
+                </div>
               ) : (
-                <p className="text-gray-500">Enter a name to search for other users.</p>
+                <div className="text-center py-8">
+                  <FiSearch className="mx-auto text-4xl text-indigo-300 mb-4" />
+                  <p className="text-indigo-600">Enter a name to search for other users.</p>
+                </div>
               )}
             </div>
 
-            {/* Conversations Card */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-3">
-              <h2 className="text-xl font-semibold mb-6 text-black">Your Conversations</h2>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 lg:col-span-3">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-indigo-900">Your Conversations</h2>
+                <span className="text-sm text-indigo-600">
+                  {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+                </span>
+              </div>
               {conversations.length > 0 ? (
                 <div className="space-y-3">
                   {conversations.map((convo) => (
@@ -709,27 +781,27 @@ export default function Dashboard() {
                           name: 'Unknown User' 
                         }
                       })}
-                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer flex justify-between items-center"
+                      className="p-4 border border-indigo-100 rounded-lg hover:bg-indigo-50 cursor-pointer transition-colors flex justify-between items-center"
                     >
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold mr-3">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-xl mr-4 shadow-sm">
                           {convo.otherUserId.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium">
+                          <p className="font-medium text-indigo-900">
                             {searchResults.find(u => u.id === convo.otherUserId)?.name || 'Unknown User'}
                           </p>
-                          <p className="text-sm text-gray-500 truncate max-w-xs">
+                          <p className="text-sm text-indigo-700 truncate max-w-xs">
                             {convo.lastMessage || 'No messages yet'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-indigo-600 mb-1">
                           {convo.lastUpdated?.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                         </p>
                         {convo.unread > 0 && (
-                          <span className="inline-block mt-1 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                          <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-red-500 text-white text-xs font-medium">
                             {convo.unread}
                           </span>
                         )}
@@ -738,50 +810,66 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">You don't have any conversations yet. Search for users to start chatting!</p>
+                <div className="text-center py-8">
+                  <FiMessageSquare className="mx-auto text-4xl text-indigo-300 mb-4" />
+                  <p className="text-indigo-600">You don't have any conversations yet.</p>
+                  <p className="text-sm text-indigo-500 mt-1">Search for users to start chatting!</p>
+                </div>
               )}
             </div>
 
-            {/* Account Settings Card */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold mb-6 text-black">Account Settings</h2>
-              <div className="space-y-4">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-indigo-100">
+              <h2 className="text-xl font-bold text-indigo-900 mb-6">Account Settings</h2>
+              <div className="space-y-3">
                 <button 
                   onClick={() => setShowProfileModal(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 text-indigo-800 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-100"
                 >
                   <div className="flex items-center">
-                    <FiUser className="mr-3 text-indigo-600" />
-                    <span>Edit Profile</span>
+                    <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+                      <FiUser className="text-indigo-600" />
+                    </div>
+                    <span className="font-medium">Edit Profile</span>
                   </div>
-                  <span className="text-gray-500">→</span>
+                  <span className="text-indigo-400">→</span>
                 </button>
                 <button 
                   onClick={() => setShowPasswordModal(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 text-indigo-800 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-100"
                 >
                   <div className="flex items-center">
-                    <FiLock className="mr-3 text-indigo-600" />
-                    <span>Change Password</span>
+                    <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+                      <FiLock className="text-indigo-600" />
+                    </div>
+                    <span className="font-medium">Change Password</span>
                   </div>
-                  <span className="text-gray-500">→</span>
+                  <span className="text-indigo-400">→</span>
                 </button>
                 <button 
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 text-black rounded-lg hover:bg-gray-200 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 bg-indigo-50 text-indigo-800 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-100"
                 >
                   <div className="flex items-center">
-                    <FiMail className="mr-3 text-indigo-600" />
-                    <span>Email Preferences</span>
+                    <div className="bg-indigo-100 p-2 rounded-lg mr-3">
+                      <FiMail className="text-indigo-600" />
+                    </div>
+                    <span className="font-medium">Email Preferences</span>
                   </div>
-                  <span className="text-gray-500">→</span>
+                  <span className="text-indigo-400">→</span>
                 </button>
               </div>
 
               <div className="mt-8">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">Account Status</h3>
-                <div className="flex items-center justify-between bg-green-50 px-4 py-3 rounded-lg">
-                  <span className="text-green-600 font-medium">Active</span>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Verified</span>
+                <h3 className="text-sm font-medium text-indigo-600 uppercase tracking-wider mb-4">Account Status</h3>
+                <div className="flex items-center justify-between bg-green-50 px-4 py-3 rounded-lg border border-green-100">
+                  <div className="flex items-center">
+                    <div className="bg-green-100 p-1.5 rounded-full mr-3">
+                      <svg className="h-4 w-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <span className="text-green-600 font-medium">Active</span>
+                  </div>
+                  <span className="text-xs bg-green-100 text-green-800 px-2.5 py-1 rounded-full font-medium">Verified</span>
                 </div>
               </div>
             </div>
